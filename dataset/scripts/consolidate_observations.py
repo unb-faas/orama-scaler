@@ -36,17 +36,21 @@ def process_csv_files(input_directory, output_file):
                 # Select only the desired columns
                 df_filtered = df[['timeStamp', 'label', 'success', 'Latency']]
                 # Convert the values in the label field
-                df_filtered['concurrency'] = df_filtered['label'].apply(convert_label)
+                df_filtered.insert(3,'concurrency', df_filtered['label'].apply(convert_label))
                 # Add 'provider' and 'usecase' columns with extracted values
-                df_filtered['provider'] = provider
-                df_filtered['usecase'] = usecase
+                #df_filtered.loc[:,'provider'] = provider
+                #df_filtered.loc[:,'usecase'] = usecase
+                
+                df_filtered.insert(4, "provider", provider)
+                df_filtered.insert(5, "usecase", usecase)
+
                 # Load the Halstead JSON
                 halstead_source = input_directory + "/../usecases/" + usecase + "/" + provider + "/halstead/consolidated.json"
                 with open(halstead_source, 'r') as consolidated_halstead:
                         halstead_json = json.load(consolidated_halstead)
                 for metric in halstead_json:
                     if (metric != "files" and metric != "path" ):
-                        df_filtered[metric] = halstead_json[metric]
+                        df_filtered.insert(6, metric, halstead_json[metric])
                 # Add the filtered dataframe to the list
                 dataframes.append(df_filtered)
             else:

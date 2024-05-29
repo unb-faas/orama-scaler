@@ -1,7 +1,3 @@
-
-# pip install 'stable-baselines3==1.7.0' --force-reinstall
-# pip install numpy gym stable-baselines3
-
 import json
 import numpy as np
 import os
@@ -16,10 +12,10 @@ class HalsteadEnv(Env):
         self.data = data
         self.current_step = 0
 
-        # Ação: escolher um provedor (0, 1, 2 ou 3)
-        self.action_space = Discrete(4)
+        # Action: choose a provider (0, 1, 2, or 3)
+        self.action_space = spaces.Discrete(4)
 
-        # Observações: métricas de Halstead
+        # Observations: Halstead metrics
         self.observation_space = Box(low=0, high=np.inf, shape=(12,), dtype=np.float32)
 
     def reset(self):
@@ -47,7 +43,7 @@ class HalsteadEnv(Env):
     def step(self, action):
         obs = self.data[self.current_step]
         #reward = 1.0 if action - (action * 0.2)  <= obs["execution_time"] and action + (action * 0.2) > obs["execution_time"] else -1.0
-        reward = 1 + obs["execution_time"] - action
+        reward = 1 + obs["Latency"] - action
         self.current_step += 1
         done = self.current_step >= len(self.data)
 
@@ -65,24 +61,24 @@ def load_data_from_json_files(directory):
     return data
 
 if __name__ == "__main__":
-    # Carregar dados dos arquivos JSON
+    # Load data from JSON files
     directory = 'samples'
     data = load_data_from_json_files(directory)
 
-    # Inicializar o ambiente com os dados
+    # Initialize the environment with the data
     env = HalsteadEnv(data)
 
-    # Verificar o ambiente (opcional, mas recomendado)
+    # Check the environment (optional, but recommended)
     check_env(env)
 
-    # Treinar o agente usando PPO
+    # Train the agent using PPO
     model = PPO("MlpPolicy", env, verbose=1)
     model.learn(total_timesteps=10000)
 
-    # Salvar o modelo treinado
+    # Save the trained model
     model.save("halstead_ppo_model")
 
-    # Avaliar o agente
+    # Evaluate the agent
     obs = env.reset()
     total_reward = 0
     total_error = 0
@@ -96,6 +92,5 @@ if __name__ == "__main__":
         if done:
             break
 
-    print("Recompensa total após a avaliação:", total_reward)
-    print("Erro total após a avaliação:", total_error)
-
+    print("Total reward after evaluation:", total_reward)
+    print("Total error after evaluation:", total_error)
