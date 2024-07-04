@@ -2,7 +2,7 @@ import json
 import numpy as np
 import os
 from gym import Env
-from gym.spaces import Discrete, Box
+from gym.spaces import Discrete, Box, spaces
 from stable_baselines3 import PPO
 from stable_baselines3.common.env_checker import check_env
 
@@ -62,7 +62,7 @@ def load_data_from_json_files(directory):
 
 if __name__ == "__main__":
     # Load data from JSON files
-    directory = 'samples'
+    directory = '../../dataset/outputs'
     data = load_data_from_json_files(directory)
 
     # Initialize the environment with the data
