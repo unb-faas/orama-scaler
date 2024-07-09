@@ -1,25 +1,22 @@
 import pandas as pd
 from sklearn.model_selection import train_test_split
-from sklearn.preprocessing import StandardScaler
+from sklearn.preprocessing import StandardScaler, LabelEncoder
 import tensorflow as tf
 from tensorflow.keras.models import Sequential
 from tensorflow.keras.layers import Dense
 from sklearn.metrics import mean_squared_error, r2_score
 import matplotlib.pyplot as plt
-import os
-
-os.environ['CUDA_VISIBLE_DEVICES'] = '-1'
-
-config = tf.ConfigProto(
-        device_count = {'GPU': 0}
-    )
-sess = tf.Session(config=config)
 
 # 1. Carregar os Dados
 data = pd.read_csv('../../dataset/outputs/dataset.csv')
 
+label_encoder = LabelEncoder()
+data['provider'] = label_encoder.fit_transform(data['provider'])
+data['usecase'] = label_encoder.fit_transform(data['usecase'])
+data['Latency'] = label_encoder.fit_transform(data['Latency'])
+
 # 2. Pré-processamento
-X = data.drop('Latency', axis=1)
+X = data.drop(columns=['Latency', 'timeStamp', 'label', 'usecase', 'success'], axis=1)
 y = data['Latency']
 
 # Codificação de variáveis categóricas (se houver)
@@ -40,11 +37,21 @@ model.add(Dense(32, activation='relu'))
 model.add(Dense(16, activation='relu'))
 model.add(Dense(1))  # Saída de regressão (valor contínuo)
 
+# Função de métrica personalizada para R^2
+def r2_metric(y_true, y_pred):
+    y_true = tf.cast(y_true, tf.float32)
+    y_pred = tf.cast(y_pred, tf.float32)
+    SS_res = tf.reduce_sum(tf.square(y_true - y_pred))
+    SS_tot = tf.reduce_sum(tf.square(y_true - tf.reduce_mean(y_true)))
+    return (1 - SS_res / (SS_tot + tf.keras.backend.epsilon()))
+
+
 # Compilar o modelo
-model.compile(optimizer='adam', loss='mean_squared_error', metrics=['mean_squared_error'])
+#model.compile(optimizer='adam', loss='mean_squared_error', metrics=['mean_squared_error'])
+model.compile(optimizer='adam', loss='mean_squared_error', metrics=[r2_metric])
 
 # 4. Treinar o Modelo
-history = model.fit(X_train, y_train, epochs=100, batch_size=32, validation_split=0.2, verbose=1)
+history = model.fit(X_train, y_train, epochs=10, batch_size=32, validation_split=0.2, verbose=1)
 
 # 5. Avaliar o Modelo
 loss, mse = model.evaluate(X_test, y_test, verbose=1)
