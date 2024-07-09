@@ -16,7 +16,7 @@ def train_until_target_mse(dataset_path, target_mse, max_executions):
     dataset['Latency'] = label_encoder.fit_transform(dataset['Latency'])
 
     # dataset = dataset.query('provider == 0')
-    #dataset = dataset.query('concurrency == 128')
+    dataset = dataset.query('concurrency == 128')
 
     # Dividir o dataset em features (X) e target (y)
     X = dataset.drop(columns=['Latency', 'timeStamp', 'label', 'usecase', 'success'])
