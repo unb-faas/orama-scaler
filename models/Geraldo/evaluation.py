@@ -37,7 +37,9 @@ def evaluate(train_results, model, X_test, y_test, dir, scaler, encoders, plot=T
         predictions_decategorized = preprocessing.decategorize(predictions_denormalized, encoders)
         originals_denormalized = preprocessing.denormalize(originals, scaler)
         originals_decategorized = preprocessing.decategorize(originals_denormalized, encoders)
-        full = pd.concat([predictions_decategorized, originals_decategorized], axis=1)
+        predictions["provider_cat"] = predictions["provider"]
+        predictions["usecase_cat"] = predictions["usecase"]
+        full = pd.concat([predictions_decategorized, originals_decategorized, predictions], axis=1)
         full = full.loc[:, ~full.columns.duplicated()]
         predictions_sorted = full.sort_values(by=['concurrency', 'provider', 'usecase'], ascending=[True, True, True])        
         predictions_sorted['difference'] = predictions_sorted['Original'] - predictions_sorted['Prediction']

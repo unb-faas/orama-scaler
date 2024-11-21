@@ -112,13 +112,13 @@ model = Sequential()
 #model.add(Dense(64, input_dim=X_train.shape[1], activation='relu'))
 
 
-# model.add(Dense(56, activation='relu'))
-# model.add(Dense(48, activation='relu'))
-# model.add(Dense(40, activation='relu'))
-# model.add(Dense(32, activation='relu'))
-# model.add(Dense(24, activation='relu'))
-# model.add(Dense(16, activation='relu'))
-# model.add(Dense(8, activation='relu'))
+model.add(Dense(56, activation='relu'))
+model.add(Dense(48, activation='relu'))
+model.add(Dense(40, activation='relu'))
+model.add(Dense(32, activation='relu'))
+model.add(Dense(24, activation='relu'))
+model.add(Dense(16, activation='relu'))
+model.add(Dense(8, activation='relu'))
 
 
 # Resultado bom!
@@ -155,7 +155,7 @@ model = Sequential()
 
 # Construir o modelo
 #model = Sequential()
-model.add(LSTM(units=50, activation='relu', input_shape=(X_train.shape[1], X_train.shape[2])))
+#model.add(LSTM(units=50, activation='relu', input_shape=(X_train.shape[1], X_train.shape[1], X_train.shape[1])))
 model.add(Dropout(0.2))
 model.add(Dense(units=1))
 

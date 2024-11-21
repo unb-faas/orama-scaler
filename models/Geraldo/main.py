@@ -5,6 +5,7 @@ import division
 import modeling
 import train
 import evaluation
+import joblib
 
 ####
 # Creates results structure
@@ -53,6 +54,8 @@ data_categorized, encoders = preprocessing.categorize(data)
 print(data_categorized)
 print(encoders)
 
+joblib.dump(encoders, f'{sub_dir}/encoders.pkl')
+
 print("#####################################")
 print("#          Clean duplicates         #")
 print("#####################################")
@@ -91,7 +94,7 @@ print("#####################################")
 
 data_normalized_z_score, scaler = preprocessing.normalize(data_without_missing)
 print(data_normalized_z_score)
-
+joblib.dump(scaler, f'{sub_dir}/scaler.pkl')
 
 # SUGESTÃO 05 ##########################################################
 #  Verificação de Outliers:
