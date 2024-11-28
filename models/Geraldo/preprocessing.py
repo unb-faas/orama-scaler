@@ -101,8 +101,6 @@ def categorize(data):
             encoders[column] = label_encoder
         else:
             print(f"A coluna {column} já parece estar codificada.")
-
-
     return data, encoders
 
 def decategorize(data, encoders):
