@@ -3,7 +3,7 @@ import modeling
 from contextlib import redirect_stdout
 
 def optimize(dir, X_train, y_train, X_test, y_test):
-    attempts = 20
+    attempts = 10
     loss_functions = ['mean_squared_error','mean_absolute_error','huber']
     epochs = [5]
     # Define the search space for hyperparameters

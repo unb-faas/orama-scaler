@@ -263,36 +263,13 @@ def correlation_analysis(data, dir, plot=True):
         plt.savefig(f"{dir}/graph-correlation-heatmap.png")
         plt.close()
 
-def winsorize(data):
-    # limit_down = 0.1
-    # limit_up = 0.1
-    # df_winsorized = data.copy()
-    # df_winsorized[df_winsorized.select_dtypes(include=['number']).columns] = df_winsorized.select_dtypes(include=['number']).apply(lambda x: winsorize(x.to_numpy()))
-    # return df_winsorized
-    # data_winsorized = data.copy()
-  
-    a = pd.Series([10, 4, 9, 8, 5, 3, 7, 2, 1, 6])
-
-    # Definir limites usando percentis
-    lower = a.quantile(0.1)  # 10º percentil
-    upper = a.quantile(0.9)  # 80º percentil
-
-    print (lower)
-    print (upper)
-    
-
-    # Aplicar Winsorization
-    a_winsorized = a.clip(lower, upper)
-
-    print(a_winsorized)
-
-    import sys
-    sys.exit()
-
-    return data
-    # for field in data:
-    #     test = [1,2,3,4]
-    #     a = np.array([10, 4, 9, 8, 5, 3, 7, 2, 1, 6])
-    #     data_winsorized[field] = winsorize(a, limits=[0.1, 0.2])
-    #     print(data_winsorized[field])
-    
+def winsorization(data):
+    print("-------DATASET UNWINSORIZED--------")
+    print(data)
+    limit_down = 0.1
+    limit_up = 0.1
+    df_winsorized = data.copy()
+    df_winsorized[df_winsorized.select_dtypes(include=['number']).columns] = df_winsorized.select_dtypes(include=['number']).apply(lambda x: winsorize(x.to_numpy(),limits=[limit_down, limit_up]))
+    print("-------DATASET WINSORIZED--------")
+    print(df_winsorized)
+    return df_winsorized
