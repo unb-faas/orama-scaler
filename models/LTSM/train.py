@@ -12,17 +12,12 @@ data = pd.read_csv('../../dataset/outputs/dataset.csv')
 
 label_encoder = LabelEncoder()
 data['provider_encoded'] = label_encoder.fit_transform(data['provider'])
-data['usecase_encoded'] = label_encoder.fit_transform(data['usecase'])
 data['Latency'] = label_encoder.fit_transform(data['Latency'])
 
 # Separar recursos e rótulo
-X = data.drop(columns=['Latency', 'timeStamp', 'label', 'usecase', 'provider', 'usecase'], axis=1)
+X = data.drop(columns=['Latency', 'timeStamp', 'label', 'provider'], axis=1)
 y = data['Latency']
 
-# Codificar colunas categóricas, se houver
-# label_encoder = LabelEncoder()
-# X['provider_encoded'] = label_encoder.fit_transform(X['provider'])
-# X['usecase_encoded'] = label_encoder.fit_transform(X['usecase'])
 
 # Dividir dados em conjuntos de treinamento e teste
 X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42)

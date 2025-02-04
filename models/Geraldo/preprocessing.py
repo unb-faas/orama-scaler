@@ -2,6 +2,8 @@ import pandas as pd
 from sklearn.preprocessing import StandardScaler, LabelEncoder
 import seaborn as sns
 import matplotlib.pyplot as plt
+from scipy.stats.mstats import winsorize
+import numpy as np
 
 def load_dataset(file_path):
      # Load the dataset from the specified path
@@ -28,7 +30,7 @@ def list_columns(data):
     return columns
 
 def remove_unused_collumns(data):
-    return data.drop(columns=['timeStamp', 'label'], axis=1)
+    return data.drop(columns=['timeStamp', 'label', 'usecase'], axis=1)
 
 def remove_duplicates(data):
     """
@@ -61,9 +63,6 @@ def remove_duplicates(data):
 
     return data_cleaned
 
-def check_missing_values(data):
-    import pandas as pd
-
 def check_and_remove_missing_values(data):
     """
     Loads a CSV file, checks for missing values, displays rows with missing fields,
@@ -94,7 +93,7 @@ def check_and_remove_missing_values(data):
 
 def categorize(data):
     encoders = {}
-    for column in ['provider', 'usecase']:
+    for column in ['provider']:
         if data[column].dtype == 'object':  # Verifique se a coluna é do tipo categórico
             label_encoder = LabelEncoder()
             data[column] = label_encoder.fit_transform(data[column])
@@ -151,9 +150,6 @@ def denormalize(normalized_data, scaler):
     original_data[normalized_data.columns] = scaler.inverse_transform(normalized_data[normalized_data.columns])
     
     return original_data
-
-
-import pandas as pd
 
 def identify_outliers(data):
     """
@@ -266,3 +262,37 @@ def correlation_analysis(data, dir, plot=True):
         plt.title("Correlation Heatmap")
         plt.savefig(f"{dir}/graph-correlation-heatmap.png")
         plt.close()
+
+def winsorize(data):
+    # limit_down = 0.1
+    # limit_up = 0.1
+    # df_winsorized = data.copy()
+    # df_winsorized[df_winsorized.select_dtypes(include=['number']).columns] = df_winsorized.select_dtypes(include=['number']).apply(lambda x: winsorize(x.to_numpy()))
+    # return df_winsorized
+    # data_winsorized = data.copy()
+  
+    a = pd.Series([10, 4, 9, 8, 5, 3, 7, 2, 1, 6])
+
+    # Definir limites usando percentis
+    lower = a.quantile(0.1)  # 10º percentil
+    upper = a.quantile(0.9)  # 80º percentil
+
+    print (lower)
+    print (upper)
+    
+
+    # Aplicar Winsorization
+    a_winsorized = a.clip(lower, upper)
+
+    print(a_winsorized)
+
+    import sys
+    sys.exit()
+
+    return data
+    # for field in data:
+    #     test = [1,2,3,4]
+    #     a = np.array([10, 4, 9, 8, 5, 3, 7, 2, 1, 6])
+    #     data_winsorized[field] = winsorize(a, limits=[0.1, 0.2])
+    #     print(data_winsorized[field])
+    

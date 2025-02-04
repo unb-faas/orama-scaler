@@ -3,9 +3,16 @@ from datetime import datetime
 import preprocessing
 import division
 import modeling
+import optimization
 import train
 import evaluation
 import joblib
+
+## Force CPU usage
+os.environ['CUDA_VISIBLE_DEVICES'] = '-1'
+
+## Flags
+optimization_enabled = True
 
 ####
 # Creates results structure
@@ -96,6 +103,11 @@ data_normalized_z_score, scaler = preprocessing.normalize(data_without_missing)
 print(data_normalized_z_score)
 joblib.dump(scaler, f'{sub_dir}/scaler.pkl')
 
+print("#####################################")
+print("#          winsorize                #")
+print("#####################################")
+data_winsored = preprocessing.winsorize(data_normalized_z_score)
+
 # SUGESTÃO 05 ##########################################################
 #  Verificação de Outliers:
 #  - Identifique e trate possíveis outliers nas colunas numéricas, 
@@ -105,12 +117,13 @@ joblib.dump(scaler, f'{sub_dir}/scaler.pkl')
 print("#####################################")
 print("#         Indetify outliers         #")
 print("#####################################")
-preprocessing.identify_outliers(data_normalized_z_score)
+preprocessing.identify_outliers(data_winsored)
+
 print("#####################################")
 print("#    Replace outliers with median   #")
 print("#####################################")
-#data_without_outliers = preprocessing.replace_outliers_with_median(data_normalized_z_score)
-data_without_outliers = preprocessing.remove_outliers(data_normalized_z_score)
+#data_without_outliers = preprocessing.replace_outliers_with_median(data_winsored)
+data_without_outliers = preprocessing.remove_outliers(data_winsored)
 print(data_without_outliers)
 
 # SUGESTÃO 06 ##########################################################
@@ -141,10 +154,36 @@ print("----------------#####################################----------------")
 print("----------------#          Division finished        #----------------")
 print("----------------#####################################----------------")
 
+best_params = {   
+    'epochs': 5, 
+    'learning_rate': 0.006830639588582575, 
+    'loss_function': 'huber', 
+    'num_layers': 1.0, 
+    'num_neurons': 32.0
+ }
+
+if optimization_enabled == True:
+    print("----------------#####################################----------------")
+    print("----------------#        Init - Optimization        #----------------")
+    print("----------------#####################################----------------")
+    best_params = optimization.optimize(sub_dir, X_train, y_train, X_test, y_test)
+    print("----------------#####################################----------------")
+    print("----------------#       Optimization finished       #----------------")
+    print("----------------#####################################----------------")
+
 print("----------------#####################################----------------")
 print("----------------#          Init - Modeling          #----------------")
 print("----------------#####################################----------------")
-model = modeling.build(sub_dir)
+params = best_params
+params['X_train'] = X_train
+params['y_train'] = y_train
+params['X_test'] = X_test
+params['y_test'] = y_test
+params['dir'] = sub_dir
+params['type'] = "train"
+params['epochs'] = 30
+
+model = modeling.build(params)
 print("----------------#####################################----------------")
 print("----------------#          Modeling finished        #----------------")
 print("----------------#####################################----------------")
@@ -152,7 +191,7 @@ print("----------------#####################################----------------")
 print("----------------#####################################----------------")
 print("----------------#          Init - Training          #----------------")
 print("----------------#####################################----------------")
-train_results, model = train.fit(X_train, y_train, model, sub_dir)
+train_results, model = train.fit(X_train, y_train, X_test, y_test, model, sub_dir)
 print("----------------#####################################----------------")
 print("----------------#          Training finished        #----------------")
 print("----------------#####################################----------------")
