@@ -3,15 +3,15 @@ import modeling
 from contextlib import redirect_stdout
 
 def optimize(dir, X_train, y_train, X_test, y_test):
-    attempts = 10
+    attempts = 20
     loss_functions = ['mean_squared_error','mean_absolute_error','huber']
     epochs = [5]
     # Define the search space for hyperparameters
     space = {
         "type": "optimization",
-        'num_layers': hp.quniform('num_layers', 1, 10, 1),  # From 1 to 5 hidden layers
-        'num_neurons': hp.quniform('num_neurons', 32, 512, 8),  # From 32 to 256 neurons per layer
-        'learning_rate': hp.loguniform('learning_rate', -4, 0),  # Between 10^-5 and 1
+        'num_layers': hp.quniform('num_layers', 1, 50, 1),  # From 1 to 5 hidden layers
+        'num_neurons': hp.quniform('num_neurons', 16, 512, 8),  # From 32 to 256 neurons per layer
+        'learning_rate': hp.loguniform('learning_rate', -5, 0),  # Between 10^-5 and 1
         'loss_function': hp.choice('loss_function', loss_functions),  # Different loss functions
         'epochs': hp.choice('epochs', epochs),
         'dir':dir,

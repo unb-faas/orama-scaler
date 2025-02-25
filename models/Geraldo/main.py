@@ -11,10 +11,10 @@ try:
 
     ## Force CPU usage
     os.environ['CUDA_VISIBLE_DEVICES'] = '-1'
-    os.environ['TF_ENABLE_ONEDNN_OPTS'] = '0'
+    #os.environ['TF_ENABLE_ONEDNN_OPTS'] = '0'
 
     ## Flags
-    optimization_enabled = True
+    optimization_enabled = False
 
     ####
     # Creates results structure
@@ -89,6 +89,14 @@ try:
     data_without_missing = preprocessing.check_and_remove_missing_values(data_cleaned)
 
     print("#####################################")
+    print("#        Remove Spikes with         #")
+    print("#   WMA - Weighted Moving Average   #")
+    print("#####################################")
+    data_without_spikes = preprocessing.remove_spikes(data_without_missing)
+
+    #data_without_spikes = data_without_missing
+
+    print("#####################################")
     print("#       Normalize with z-score      #")
     print("#####################################")
     # SUGESTÃO 03 ##########################################################
@@ -101,9 +109,13 @@ try:
     #data_normalized_z_score = preprocessing.normalize_z_score(data_without_missing)
     #print(data_normalized_z_score)
 
-    data_normalized_z_score, scaler = preprocessing.normalize(data_without_missing)
+    data_normalized_z_score, scaler = preprocessing.normalize(data_without_spikes)
     print(data_normalized_z_score)
     joblib.dump(scaler, f'{sub_dir}/scaler.pkl')
+
+    #data_normalized_z_score_temp = preprocessing.remove_spikes(data_normalized_z_score)
+
+    #data_normalized_z_score = data_normalized_z_score_temp
 
     print("#####################################")
     print("#          winsorize                #")
@@ -117,7 +129,7 @@ try:
     #  pois isso pode distorcer o treinamento do modelo.
     ########################################################################
     print("#####################################")
-    print("#         Indetify outliers         #")
+    print("#         Identify outliers         #")
     print("#####################################")
     preprocessing.identify_outliers(data_winsored)
 
@@ -126,6 +138,7 @@ try:
     print("#####################################")
     #data_without_outliers = preprocessing.replace_outliers_with_median(data_winsored)
     data_without_outliers = preprocessing.remove_outliers(data_winsored)
+    #data_without_outliers = data_winsored
     print(data_without_outliers)
 
     # SUGESTÃO 06 ##########################################################
@@ -137,6 +150,14 @@ try:
     #  para reduzir a dimensionalidade.
     ########################################################################
     preprocessing.correlation_analysis(data_without_outliers, sub_dir)
+
+    print("#####################################")
+    print("#     Reducing Scale with PCA       #")
+    print("#####################################")
+    data_with_pca = preprocessing.reduce_scale_pca(data_without_outliers)
+    preprocessing.correlation_analysis(data_with_pca, sub_dir, True, "reduced")
+    data_reduced = preprocessing.remove_reduced_collumns(data_with_pca)
+    preprocessing.correlation_analysis(data_reduced, sub_dir, True, "reduced_cleaned")
 
     print("----------------#####################################----------------")
     print("----------------#      Preprocessing finished       #----------------")
@@ -151,17 +172,17 @@ try:
     print("----------------#####################################----------------")
     print("----------------#          Init - division          #----------------")
     print("----------------#####################################----------------")
-    X_train, X_test, y_train, y_test = division.divide(data_without_outliers)
+    X_train, X_test, y_train, y_test = division.divide(data_reduced)
     print("----------------#####################################----------------")
     print("----------------#          Division finished        #----------------")
     print("----------------#####################################----------------")
 
     best_params = {   
         'epochs': 5, 
-        'learning_rate': 0.006830639588582575, 
-        'loss_function': 'huber', 
+        'learning_rate': 0.0030487328393528374, 
+        'loss_function': 'mean_squared_error', 
         'num_layers': 1.0, 
-        'num_neurons': 32.0
+        'num_neurons': 120.0
     }
 
     if optimization_enabled == True:

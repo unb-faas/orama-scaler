@@ -1,5 +1,6 @@
 import pandas as pd
 from sklearn.preprocessing import StandardScaler, LabelEncoder
+from sklearn.decomposition import PCA
 import seaborn as sns
 import matplotlib.pyplot as plt
 from scipy.stats.mstats import winsorize
@@ -241,7 +242,7 @@ def replace_outliers_with_median(data):
 
     return data
 
-def correlation_analysis(data, dir, plot=True):
+def correlation_analysis(data, dir, plot=True, title="main"):
     """
     Performs correlation analysis on the dataset and visualizes the correlation matrix.
     
@@ -260,16 +261,63 @@ def correlation_analysis(data, dir, plot=True):
         plt.figure(figsize=(10, 8))
         sns.heatmap(correlation_matrix, annot=True, cmap='coolwarm', fmt=".2f", linewidths=0.5)
         plt.title("Correlation Heatmap")
-        plt.savefig(f"{dir}/graph-correlation-heatmap.png")
+        plt.savefig(f"{dir}/graph-correlation-heatmap-{title}.png")
         plt.close()
 
 def winsorization(data):
     print("-------DATASET UNWINSORIZED--------")
     print(data)
-    limit_down = 0.1
-    limit_up = 0.1
+    limit_down = 0.15
+    limit_up = 0.15
     df_winsorized = data.copy()
     df_winsorized[df_winsorized.select_dtypes(include=['number']).columns] = df_winsorized.select_dtypes(include=['number']).apply(lambda x: winsorize(x.to_numpy(),limits=[limit_down, limit_up]))
     print("-------DATASET WINSORIZED--------")
     print(df_winsorized)
     return df_winsorized
+
+cols_pca = [
+        "total_operands", 
+        "distinct_operands", 
+        "total_operators", 
+        "distinct_operators",
+        "time", 
+        "bugs", 
+        "effort", 
+        "volume", 
+        #"difficulty", 
+        #"vocabulary", 
+        #"length"
+    ]
+
+def reduce_scale_pca(data):
+    # Normalize
+    scaler = StandardScaler()
+    X_scaled = scaler.fit_transform(data[cols_pca])
+
+    # Reduce to 3 components
+    #pca = PCA(n_components=3)
+    pca = PCA(n_components=1)
+    principal_components = pca.fit_transform(X_scaled)
+
+    # Add to dataset
+    df_pca = pd.DataFrame(principal_components, columns=["PCA1"])
+    #df_pca = pd.DataFrame(principal_components, columns=["PCA1"])
+    df = data.merge(df_pca, left_index=True, right_index=True)
+
+    print(df)
+
+    return df
+
+def remove_reduced_collumns(data):
+    return data.drop(columns=cols_pca, axis=1)
+
+def remove_spikes(data):
+    df = pd.DataFrame(data)
+    window_size = 10
+    weights = np.arange(1, window_size + 1)
+    df['WMA'] = df['Latency'].rolling(window=window_size).apply(lambda x: np.dot(x, weights) / weights.sum(), raw=True)
+    print(data['Latency'])
+    print(df['WMA'])
+    data['Latency'] = df['WMA']
+    return data
+
