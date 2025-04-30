@@ -9,12 +9,18 @@ try:
     import evaluation
     import joblib
 
+    from tensorflow.compat.v1 import ConfigProto
+    from tensorflow.compat.v1 import InteractiveSession
+    config = ConfigProto()
+    config.gpu_options.allow_growth = True
+    session = InteractiveSession(config=config)
+
     ## Force CPU usage
-    os.environ['CUDA_VISIBLE_DEVICES'] = '-1'
+    os.environ['CUDA_VISIBLE_DEVICES'] = '0'
     #os.environ['TF_ENABLE_ONEDNN_OPTS'] = '0'
 
     ## Flags
-    optimization_enabled = False
+    optimization_enabled = bool(input("Do you want to use optimizator (True/False)? "))
 
     ####
     # Creates results structure
@@ -185,11 +191,13 @@ try:
         'num_neurons': 120.0
     }
 
+    arch_choosed = input("Inform the arch to be used (dense, lstm, blstm): ")
+
     if optimization_enabled == True:
         print("----------------#####################################----------------")
         print("----------------#        Init - Optimization        #----------------")
         print("----------------#####################################----------------")
-        best_params = optimization.optimize(sub_dir, X_train, y_train, X_test, y_test)
+        best_params = optimization.optimize(sub_dir, X_train, y_train, X_test, y_test, arch_choosed)
         print("----------------#####################################----------------")
         print("----------------#       Optimization finished       #----------------")
         print("----------------#####################################----------------")
@@ -205,6 +213,9 @@ try:
     params['dir'] = sub_dir
     params['type'] = "train"
     params['epochs'] = 30
+
+
+    params['architecture'] = arch_choosed
 
     model = modeling.build(params)
     print("----------------#####################################----------------")
@@ -222,7 +233,7 @@ try:
     print("----------------#####################################----------------")
     print("----------------#         Init - Evaluation         #----------------")
     print("----------------#####################################----------------")
-    evaluation.evaluate(train_results, model, X_test, y_test, sub_dir, scaler, encoders)
+    evaluation.evaluate(train_results, model, X_test, y_test, sub_dir, scaler, encoders, arch_choosed)
     print("----------------#####################################----------------")
     print("----------------#         Evaluation finished       #----------------")
     print("----------------#####################################----------------")

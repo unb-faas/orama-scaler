@@ -6,16 +6,16 @@ import numpy as np
 import seaborn as sns
 from sklearn.model_selection import KFold
 
-def evaluate(train_results, model, X_test, y_test, dir, scaler, encoders, plot=True, test=True):
+def evaluate(train_results, model, X_test, y_test, dir, scaler, encoders, arch, plot=True, test=True):
     y_pred = model.predict(X_test)
     mae = mean_absolute_error(y_test, y_pred)
-    print(f"MAE: {mae}")
+    print(f"{arch} MAE: {mae}")
     mse = mean_squared_error(y_test, y_pred)
-    print(f"MSE: {mse}")
+    print(f"{arch} MSE: {mse}")
     rmse = np.sqrt(mse)
-    print(f"RMSE: {rmse}")
+    print(f"{arch} RMSE: {rmse}")
     r2 = r2_score(y_test, y_pred)
-    print(f'R^2 Score: {r2}')
+    print(f'{arch} R^2 Score: {r2}')
 
     if plot:
         plt.plot(train_results.history['loss'], label='Training Loss')
@@ -23,7 +23,7 @@ def evaluate(train_results, model, X_test, y_test, dir, scaler, encoders, plot=T
         plt.legend()
         plt.xlabel('Epochs')
         plt.ylabel('Loss')
-        plt.title('Training and Validation Loss')
+        plt.title(f"{arch}: Training and Validation Loss")
         plt.savefig(f"{dir}/graph-loss.png")
         plt.close()
 
@@ -35,7 +35,7 @@ def evaluate(train_results, model, X_test, y_test, dir, scaler, encoders, plot=T
         plt.figure(figsize=(6, 4))
         sns.boxplot(y=rmse_values, color='skyblue')
         plt.ylabel("RMSE")
-        plt.title("Testset RMSE Boxplot")
+        plt.title(f"{arch}: Testset RMSE Boxplot")
         plt.savefig(f"{dir}/graph-boxplot-rmse.png")
         print("RMSE - BOXPLOT generated")
 
@@ -43,7 +43,7 @@ def evaluate(train_results, model, X_test, y_test, dir, scaler, encoders, plot=T
         mse_values = (y_test - y_pred) ** 2
         plt.figure(figsize=(6, 4))
         sns.boxplot(y=mse_values, color='lightcoral')
-        plt.title("Testset MSE Boxplot")
+        plt.title(f"{arch}: Testset MSE Boxplot")
         plt.ylabel("MSE")
         plt.savefig(f"{dir}/graph-boxplot-mse.png")
         print("MSE - BOXPLOT generated")
@@ -61,7 +61,7 @@ def evaluate(train_results, model, X_test, y_test, dir, scaler, encoders, plot=T
             r2_values.append(r2)
         plt.figure(figsize=(6, 4))
         sns.boxplot(y=r2_values, color='lightgreen')
-        plt.title("Testset R^2 Boxplot")
+        plt.title(f"{arch}: Testset R^2 Boxplot")
         plt.ylabel("R^2")
         plt.savefig(f"{dir}/graph-boxplot-r2.png")
         print("R² - BOXPLOT generated")
@@ -79,7 +79,7 @@ def evaluate(train_results, model, X_test, y_test, dir, scaler, encoders, plot=T
             mape_values.append(mape)
         plt.figure(figsize=(6, 4))
         sns.boxplot(y=mape_values, color='lightblue')
-        plt.title("Testset MAPE Boxplot")
+        plt.title(f"{arch}: Testset MAPE Boxplot")
         plt.ylabel("MAPE (%)")
         plt.savefig(f"{dir}/graph-boxplot-mape.png")
         print("MAPE - BOXPLOT generated")
@@ -94,7 +94,7 @@ def evaluate(train_results, model, X_test, y_test, dir, scaler, encoders, plot=T
         # Adjusting X Axis 
         plt.xlim(150, 250)
         # Adding titles and labels
-        plt.title('Observation vs Prediction', fontsize=14)
+        plt.title(f"{arch}: Observation vs Prediction", fontsize=14)
         plt.xlabel('Time / Data Point', fontsize=12)
         plt.ylabel('Value', fontsize=12)
         # Adding a legend

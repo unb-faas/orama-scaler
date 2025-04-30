@@ -2,15 +2,15 @@ from hyperopt import fmin, tpe, hp, Trials
 import modeling
 from contextlib import redirect_stdout
 
-def optimize(dir, X_train, y_train, X_test, y_test):
-    attempts = 20
+def optimize(dir, X_train, y_train, X_test, y_test, arch):
+    attempts = 10
     loss_functions = ['mean_squared_error','mean_absolute_error','huber']
     epochs = [5]
     # Define the search space for hyperparameters
     space = {
         "type": "optimization",
-        'num_layers': hp.quniform('num_layers', 1, 50, 1),  # From 1 to 5 hidden layers
-        'num_neurons': hp.quniform('num_neurons', 16, 512, 8),  # From 32 to 256 neurons per layer
+        'num_layers': hp.quniform('num_layers', 1, 20, 1),  # From 1 to 5 hidden layers
+        'num_neurons': hp.quniform('num_neurons', 16, 256, 8),  # From 32 to 256 neurons per layer
         'learning_rate': hp.loguniform('learning_rate', -5, 0),  # Between 10^-5 and 1
         'loss_function': hp.choice('loss_function', loss_functions),  # Different loss functions
         'epochs': hp.choice('epochs', epochs),
@@ -18,7 +18,8 @@ def optimize(dir, X_train, y_train, X_test, y_test):
         'X_train': X_train, 
         'y_train': y_train, 
         'X_test': X_test,
-        'y_test': y_test
+        'y_test': y_test,
+        'architecture': arch
     }
 
     # Create Trials to store results
