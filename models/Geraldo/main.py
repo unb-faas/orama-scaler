@@ -8,6 +8,7 @@ try:
     import train
     import evaluation
     import joblib
+    from contextlib import redirect_stdout
 
     from tensorflow.compat.v1 import ConfigProto
     from tensorflow.compat.v1 import InteractiveSession
@@ -16,11 +17,11 @@ try:
     session = InteractiveSession(config=config)
 
     ## Force CPU usage
-    os.environ['CUDA_VISIBLE_DEVICES'] = '0'
+    os.environ['CUDA_VISIBLE_DEVICES'] = '1'
     #os.environ['TF_ENABLE_ONEDNN_OPTS'] = '0'
 
     ## Flags
-    optimization_enabled = bool(input("Do you want to use optimizator (True/False)? "))
+    optimization_enabled = False #bool(input("Do you want to use optimizator (True/False)? "))
 
     ####
     # Creates results structure
@@ -183,59 +184,115 @@ try:
     print("----------------#          Division finished        #----------------")
     print("----------------#####################################----------------")
 
-    best_params = {   
-        'epochs': 5, 
-        'learning_rate': 0.0030487328393528374, 
-        'loss_function': 'mean_squared_error', 
-        'num_layers': 1.0, 
-        'num_neurons': 120.0
+    best_params = {
+        'Dense':{   
+            'epochs': 3, 
+            'learning_rate': 0.0030487328393528374, 
+            'loss_function': 'mean_squared_error', 
+            'num_layers': 1.0, 
+            'num_neurons': 120.0
+        },
+        'LSTM':{   
+            'epochs': 3, 
+            'learning_rate': 0.0030487328393528374, 
+            'loss_function': 'mean_squared_error', 
+            'num_layers': 1.0, 
+            'num_neurons': 120.0
+        },
+        'BLSTM':{   
+            'epochs': 3, 
+            'learning_rate': 0.0030487328393528374, 
+            'loss_function': 'mean_squared_error', 
+            'num_layers': 1.0, 
+            'num_neurons': 120.0
+        }
     }
 
-    arch_choosed = input("Inform the arch to be used (dense, lstm, blstm): ")
+    arch_result = {}
+    archs = ['Dense', 'LSTM', 'BLSTM']
 
-    if optimization_enabled == True:
+    for arch in archs:
+
         print("----------------#####################################----------------")
-        print("----------------#        Init - Optimization        #----------------")
-        print("----------------#####################################----------------")
-        best_params = optimization.optimize(sub_dir, X_train, y_train, X_test, y_test, arch_choosed)
-        print("----------------#####################################----------------")
-        print("----------------#       Optimization finished       #----------------")
+        print(f"----------------#           Init - {arch}        #----------------")
         print("----------------#####################################----------------")
 
-    print("----------------#####################################----------------")
-    print("----------------#          Init - Modeling          #----------------")
-    print("----------------#####################################----------------")
-    params = best_params
-    params['X_train'] = X_train
-    params['y_train'] = y_train
-    params['X_test'] = X_test
-    params['y_test'] = y_test
-    params['dir'] = sub_dir
-    params['type'] = "train"
-    params['epochs'] = 30
+        if optimization_enabled == True:
+            print("----------------#####################################----------------")
+            print("----------------#        Init - Optimization        #----------------")
+            print("----------------#####################################----------------")
+            best_params[arch] = optimization.optimize(sub_dir, X_train, y_train, X_test, y_test, arch, epochs=1, attempts=1)
+            print("----------------#####################################----------------")
+            print("----------------#       Optimization finished       #----------------")
+            print("----------------#####################################----------------")
 
+        print("----------------#####################################----------------")
+        print("----------------#          Init - Modeling          #----------------")
+        print("----------------#####################################----------------")
+        params = best_params[arch]
+        params['X_train'] = X_train
+        params['y_train'] = y_train
+        params['X_test'] = X_test
+        params['y_test'] = y_test
+        params['dir'] = sub_dir
+        params['type'] = "train"
+        params['epochs'] = 3
+        params['architecture'] = arch
 
-    params['architecture'] = arch_choosed
+        model = modeling.build(params)
+        print("----------------#####################################----------------")
+        print("----------------#          Modeling finished        #----------------")
+        print("----------------#####################################----------------")
 
-    model = modeling.build(params)
+        print("----------------#####################################----------------")
+        print("----------------#          Init - Training          #----------------")
+        print("----------------#####################################----------------")
+        train_results, model = train.fit(X_train, y_train, X_test, y_test, model, sub_dir, arch, int(params['epochs']))
+        print("----------------#####################################----------------")
+        print("----------------#          Training finished        #----------------")
+        print("----------------#####################################----------------")
+
+        arch_result[arch] = {
+                "params": params, 
+                "model": model,
+                "train_results": train_results,
+                "X_test":X_test,
+                "y_test": y_test,
+                "scaler": scaler, 
+                "encoders": encoders
+        }
+
+        print("----------------#####################################----------------")
+        print("----------------#         Init - Evaluation         #----------------")
+        print("----------------#####################################----------------")
+        evaluation.evaluate({arch:arch_result[arch]}, X_test, y_test, scaler, encoders, arch, sub_dir)
+        print("----------------#####################################----------------")
+        print("----------------#         Evaluation finished       #----------------")
+        print("----------------#####################################----------------")     
+
+        with open(f"{sub_dir}/results_{arch}.txt", 'w') as f:
+            with redirect_stdout(f):
+                print(f"{arch} results:", arch_result[arch])
+
+        print("----------------#####################################----------------")
+        print(f"----------------#         {arch} - finished      #----------------")
+        print("----------------#####################################----------------")
+
+    with open(f"{sub_dir}/results_consolidated.txt", 'w') as f:
+            with redirect_stdout(f):
+                print(f"Results:", arch_result)
+
+    print("----------------##################################################----------------")
+    print("----------------#         Init - Consolidated Evaluation         #----------------")
+    print("----------------##################################################----------------")
+    evaluation.evaluate(arch_result, X_test, y_test, scaler, encoders, arch, sub_dir)
+    print("----------------##################################################----------------")
+    print("----------------#         Consolidated Evaluation finished       #----------------")
+    print("----------------##################################################----------------") 
+    
     print("----------------#####################################----------------")
-    print("----------------#          Modeling finished        #----------------")
+    print(f"----------------#           All finished            #----------------")
     print("----------------#####################################----------------")
 
-    print("----------------#####################################----------------")
-    print("----------------#          Init - Training          #----------------")
-    print("----------------#####################################----------------")
-    train_results, model = train.fit(X_train, y_train, X_test, y_test, model, sub_dir)
-    print("----------------#####################################----------------")
-    print("----------------#          Training finished        #----------------")
-    print("----------------#####################################----------------")
-
-    print("----------------#####################################----------------")
-    print("----------------#         Init - Evaluation         #----------------")
-    print("----------------#####################################----------------")
-    evaluation.evaluate(train_results, model, X_test, y_test, sub_dir, scaler, encoders, arch_choosed)
-    print("----------------#####################################----------------")
-    print("----------------#         Evaluation finished       #----------------")
-    print("----------------#####################################----------------")
 except Exception as e:
     print(f"Erro: {e}")

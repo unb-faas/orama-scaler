@@ -2,10 +2,9 @@ from hyperopt import fmin, tpe, hp, Trials
 import modeling
 from contextlib import redirect_stdout
 
-def optimize(dir, X_train, y_train, X_test, y_test, arch):
-    attempts = 10
+def optimize(dir, X_train, y_train, X_test, y_test, arch, epochs=5, attempts=10):
     loss_functions = ['mean_squared_error','mean_absolute_error','huber']
-    epochs = [5]
+    epochs_list = [epochs]
     # Define the search space for hyperparameters
     space = {
         "type": "optimization",
@@ -13,7 +12,7 @@ def optimize(dir, X_train, y_train, X_test, y_test, arch):
         'num_neurons': hp.quniform('num_neurons', 16, 256, 8),  # From 32 to 256 neurons per layer
         'learning_rate': hp.loguniform('learning_rate', -5, 0),  # Between 10^-5 and 1
         'loss_function': hp.choice('loss_function', loss_functions),  # Different loss functions
-        'epochs': hp.choice('epochs', epochs),
+        'epochs': hp.choice('epochs', epochs_list),
         'dir':dir,
         'X_train': X_train, 
         'y_train': y_train, 
@@ -32,12 +31,12 @@ def optimize(dir, X_train, y_train, X_test, y_test, arch):
                 max_evals=attempts,  # Number of attempts
                 trials=trials)
     
-    best["epochs"] = epochs[best["epochs"]]
+    best["epochs"] = epochs_list[best["epochs"]]
     best["loss_function"] = loss_functions[best["loss_function"]]
     print("------------*******----------------")
     print("Best Hyperparameters Found:", best)
     print("------------*******----------------")
-    with open(f"{dir}/model-optimization.txt", 'w') as f:
+    with open(f"{dir}/{arch}_model-optimization.txt", 'w') as f:
             with redirect_stdout(f):
                 print("Best Hyperparameters Found:", best)
     return best

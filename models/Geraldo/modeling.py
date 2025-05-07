@@ -23,14 +23,14 @@ def build(params):
 
     model = keras.Sequential()
 
-    if architecture == "dense":
+    if architecture == "Dense":
         model.add(Input(shape=(X_train.shape[1],)))
         for _ in range(num_layers):
             model.add(Dense(num_neurons, activation='relu', kernel_regularizer=l2(0.01)))
             num_neurons = max(1, num_neurons // 2)
         model.add(Dense(1, activation='linear'))
 
-    elif architecture in ["lstm", "blstm"]:
+    elif architecture in ["LSTM", "BLSTM"]:
         if len(X_train.shape) == 2:
             X_train = np.array(X_train)[..., None]
             X_test = np.array(X_test)[..., None]
@@ -45,7 +45,7 @@ def build(params):
 
             lstm_layer = LSTM(units, return_sequences=return_seq)
 
-            if architecture == "blstm":
+            if architecture == "BLSTM":
                 model.add(Bidirectional(lstm_layer))
             else:
                 model.add(lstm_layer)
@@ -53,7 +53,7 @@ def build(params):
         model.add(Dense(1, activation='linear'))
 
     else:
-        raise ValueError(f"Arquitetura desconhecida: {architecture}")
+        raise ValueError(f"Architecture unknown: {architecture}")
 
     model.compile(optimizer=keras.optimizers.Adam(learning_rate=learning_rate),
                   loss=loss_function,
@@ -65,7 +65,7 @@ def build(params):
         return val_loss
     else:
         model.summary()
-        with open(f"{dir}/model-summary.txt", 'w') as f:
+        with open(f"{dir}/model-summary-{architecture}.txt", 'w') as f:
             with redirect_stdout(f):
                 model.summary()
         return model
