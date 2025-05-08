@@ -26,6 +26,7 @@ try:
     epoches_optimization = 5
     if optimization_enabled:
         epoches_optimization = int(input("Epoches in optimization: "))
+        attempts_optimization = int(input("Attempts in optimization: "))
     epoches_training = int(input("Epoches in training: "))
 
     ####
@@ -226,7 +227,7 @@ try:
             print("----------------#####################################----------------")
             print("----------------#        Init - Optimization        #----------------")
             print("----------------#####################################----------------")
-            best_params[arch] = optimization.optimize(sub_dir, X_train, y_train, X_test, y_test, arch, epochs=epoches_optimization, attempts=1)
+            best_params[arch] = optimization.optimize(sub_dir, X_train, y_train, X_test, y_test, arch, epochs=epoches_optimization, attempts=attempts_optimization)
             print("----------------#####################################----------------")
             print("----------------#       Optimization finished       #----------------")
             print("----------------#####################################----------------")
