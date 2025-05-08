@@ -21,7 +21,12 @@ try:
     #os.environ['TF_ENABLE_ONEDNN_OPTS'] = '0'
 
     ## Flags
-    optimization_enabled = False #bool(input("Do you want to use optimizator (True/False)? "))
+    optimization_enabled = int(input("Do you want to use optimizator (0/1)? "))
+    optimization_enabled = True if optimization_enabled==1 else False
+    epoches_optimization = 5
+    if optimization_enabled:
+        epoches_optimization = int(input("Epoches in optimization: "))
+    epoches_training = int(input("Epoches in training: "))
 
     ####
     # Creates results structure
@@ -221,7 +226,7 @@ try:
             print("----------------#####################################----------------")
             print("----------------#        Init - Optimization        #----------------")
             print("----------------#####################################----------------")
-            best_params[arch] = optimization.optimize(sub_dir, X_train, y_train, X_test, y_test, arch, epochs=1, attempts=1)
+            best_params[arch] = optimization.optimize(sub_dir, X_train, y_train, X_test, y_test, arch, epochs=epoches_optimization, attempts=1)
             print("----------------#####################################----------------")
             print("----------------#       Optimization finished       #----------------")
             print("----------------#####################################----------------")
@@ -236,7 +241,7 @@ try:
         params['y_test'] = y_test
         params['dir'] = sub_dir
         params['type'] = "train"
-        params['epochs'] = 3
+        params['epochs'] = epoches_training
         params['architecture'] = arch
 
         model = modeling.build(params)

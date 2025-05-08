@@ -1,12 +1,12 @@
-from sklearn.metrics import mean_absolute_error, mean_squared_error, r2_score, mean_squared_error, mean_absolute_percentage_error
+from sklearn.metrics import mean_absolute_percentage_error, mean_absolute_error, mean_squared_error, r2_score, mean_squared_error, mean_absolute_percentage_error
 import matplotlib.pyplot as plt
-import preprocessing
 import pandas as pd
 import numpy as np
 import seaborn as sns
 from sklearn.model_selection import KFold
 from sklearn.metrics import r2_score
 import random
+from contextlib import redirect_stdout
 
 def calculate_metrics(models, X_test, y_test):
     # Assume X_test and y_test are the same for all models
@@ -129,6 +129,31 @@ def plot_obs_preds(metrics, dir):
     plt.savefig(f"{dir}/graph-obs-preds-{str_arch}.png")
     plt.close()
 
+def plot_overview(metrics, dir):
+    for i, (arch, model) in enumerate(metrics.items()): 
+        observations = np.reshape(model["observations"],-1)
+        predictions = np.reshape(model["predictions"],-1)
+        print(f"Metrics for {arch}")
+        mae = mean_absolute_error(observations, predictions)
+        print(f"{arch} MAE: {mae}")
+        mape = mean_absolute_percentage_error(observations, predictions)
+        print(f"{arch} MAPE: {mape}")
+        mse = mean_squared_error(observations, predictions)
+        print(f"{arch} MSE: {mse}")
+        rmse = np.sqrt(mse)
+        print(f"{arch} RMSE: {rmse}")
+        r2 = r2_score(observations, predictions)
+        print(f'{arch} R^2 Score: {r2}')
+        evaluation = {
+            "mae": mae,
+            "mape": mape,
+            "mse": mse,
+            "rmse": rmse,
+            "r2": r2
+        }
+        with open(f"{dir}/model-evaluation-{arch}.txt", 'w') as f:
+            with redirect_stdout(f):
+                print(evaluation)
 
 def evaluate(results, X_test, y_test, scaler, encoders, arch, dir, plot=True, test=False):
     if isinstance(results, dict):
@@ -139,126 +164,7 @@ def evaluate(results, X_test, y_test, scaler, encoders, arch, dir, plot=True, te
         plot_metric_boxplot(metrics, "mape", "MAPE", "#%06x" % random.randint(0, 0xFFFFFF), dir)
         plot_metric_boxplot(metrics, "mae", "MAE", "#%06x" % random.randint(0, 0xFFFFFF), dir)
         plot_obs_preds(metrics, dir)
-        plot_loss(results, dir) 
-
-    if isinstance(results, list):
-        for result in results:
-            train_results = result["train_results"]
-            model = result["model"]
-            
-            y_pred = model.predict(X_test)
-            mae = mean_absolute_error(y_test, y_pred)
-            print(f"{arch} MAE: {mae}")
-            mse = mean_squared_error(y_test, y_pred)
-            print(f"{arch} MSE: {mse}")
-            rmse = np.sqrt(mse)
-            print(f"{arch} RMSE: {rmse}")
-            r2 = r2_score(y_test, y_pred)
-            print(f'{arch} R^2 Score: {r2}')
-
-            if plot:
-                plt.clf()
-                plt.plot(train_results.history['loss'], label='Training Loss')
-                plt.plot(train_results.history['val_loss'], label='Validation Loss')
-                plt.legend()
-                plt.xlabel('Epochs')
-                plt.ylabel('Loss')
-                plt.title(f"{arch}: Training and Validation Loss")
-                plt.savefig(f"{dir}/{arch}_graph-loss.png")
-                plt.close()
-
-                y_test = np.squeeze(y_test)
-                y_pred = np.squeeze(y_pred)
-                
-                # RMSE - BOXPLOT
-                plt.clf()
-                rmse_values = np.sqrt((y_test - y_pred) ** 2)
-                plt.figure(figsize=(6, 4))
-                sns.boxplot(y=rmse_values, color='skyblue')
-                plt.ylabel("RMSE")
-                plt.title(f"{arch}: Testset RMSE Boxplot")
-                plt.savefig(f"{dir}/{arch}_graph-boxplot-rmse.png")
-                print("RMSE - BOXPLOT generated")
-
-                # MSE - BOXPLOT
-                plt.clf()
-                mse_values = (y_test - y_pred) ** 2
-                plt.figure(figsize=(6, 4))
-                sns.boxplot(y=mse_values, color='lightcoral')
-                plt.title(f"{arch}: Testset MSE Boxplot")
-                plt.ylabel("MSE")
-                plt.savefig(f"{dir}/{arch}_graph-boxplot-mse.png")
-                print("MSE - BOXPLOT generated")
-
-                # R2 - BOXPLOT
-                plt.clf()
-                X_test_r2 = np.asarray(X_test)
-                y_test_r2 = np.squeeze(np.asarray(y_test))
-                kf = KFold(n_splits=10, shuffle=True, random_state=42)  # 10 folds
-                r2_values = []
-                for train_index, test_index in kf.split(X_test_r2):
-                    X_fold, y_fold = X_test_r2[test_index], y_test_r2[test_index] 
-                    y_pred_fold = model.predict(X_fold)  
-                    y_pred_fold = np.squeeze(y_pred_fold)  
-                    r2 = r2_score(y_fold, y_pred_fold)
-                    r2_values.append(r2)
-                plt.figure(figsize=(6, 4))
-                sns.boxplot(y=r2_values, color='lightgreen')
-                plt.title(f"{arch}: Testset R^2 Boxplot")
-                plt.ylabel("R^2")
-                plt.savefig(f"{dir}/{arch}_graph-boxplot-r2.png")
-                print("R² - BOXPLOT generated")
-
-                # MAPE - BOXPLOT
-                plt.clf()
-                X_test_mape = np.array(X_test)
-                y_test_mape = np.squeeze(np.array(y_test))
-                kf = KFold(n_splits=10, shuffle=True, random_state=42)  # 10 folds
-                mape_values = []
-                for train_index, test_index in kf.split(X_test_mape):
-                    X_fold, y_fold = X_test_mape[test_index], y_test_mape[test_index]  # Seleção dos dados
-                    y_pred_fold = model.predict(X_fold)
-                    y_pred_fold = np.squeeze(y_pred_fold)
-                    mape = mean_absolute_percentage_error(y_fold, y_pred_fold)
-                    mape_values.append(mape)
-                plt.figure(figsize=(6, 4))
-                sns.boxplot(y=mape_values, color='lightblue')
-                plt.title(f"{arch}: Testset MAPE Boxplot")
-                plt.ylabel("MAPE (%)")
-                plt.savefig(f"{dir}/{arch}_graph-boxplot-mape.png")
-                print("MAPE - BOXPLOT generated")
-
-                # OBSERVATIONS vs predictions
-                plt.clf()
-                observations = y_test
-                predictions = y_pred
-                plt.figure(figsize=(10, 6))
-                # Plotting both the observations and predictions as horizontal lines
-                plt.plot(range(len(observations)), observations, label='Observations', color='blue', marker='o')
-                plt.plot(range(len(predictions)), predictions, label='Predictions', color='orange', marker='x')
-                # Adjusting X Axis 
-                plt.xlim(150, 250)
-                # Adding titles and labels
-                plt.title(f"{arch}: Observation vs Prediction", fontsize=14)
-                plt.xlabel('Time / Data Point', fontsize=12)
-                plt.ylabel('Value', fontsize=12)
-                # Adding a legend
-                plt.legend()
-                plt.savefig(f"{dir}/{arch}_graph-obs-vs-pred.png")
-                print("OBSERVATIONS vs predictions generated")
-
-
-            #if test:
-            #    y_pred_df = pd.DataFrame(y_pred, columns=['Prediction'])
-            #    y_test_reshaped = y_test.values.reshape(-1, 1)
-            #    y_test_df = pd.DataFrame(y_test_reshaped, columns=['Original'])        
-            #    X_test_reset = X_test.reset_index(drop=True)
-            #    predictions = pd.concat([X_test_reset, y_pred_df], axis=1)
-            #    originals = pd.concat([X_test_reset, y_test_df], axis=1)
-            #    predictions["provider_cat"] = predictions["provider"]
-            #    full = predictions
-            #    full = full.loc[:, ~full.columns.duplicated()]
-            #    predictions_sorted = full.sort_values(by=['concurrency', 'provider'], ascending=[True, True])        
-            #    predictions_sorted['difference'] = predictions_sorted['Original'] - predictions_sorted['Prediction']
-            #    predictions_sorted.to_csv(f"{dir}/{arch}_predictions.csv", index=False)
-            #    print(predictions_sorted)
+        plot_loss(results, dir)
+        plot_overview(metrics, dir)
+    else:
+        raise ValueError(f"Results format unknown")
