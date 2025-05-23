@@ -2,7 +2,7 @@ from hyperopt import fmin, tpe, hp, Trials
 import modeling
 from contextlib import redirect_stdout
 
-def optimize(dir, X_train, y_train, X_test, y_test, arch, epochs=5, attempts=10):
+def optimize(dir, X_train, y_train, X_test, y_test, arch, batch_size, epochs=5, attempts=10):
     loss_functions = ['mean_squared_error','mean_absolute_error','huber']
     epochs_list = [epochs]
     # Define the search space for hyperparameters
@@ -18,7 +18,8 @@ def optimize(dir, X_train, y_train, X_test, y_test, arch, epochs=5, attempts=10)
         'y_train': y_train, 
         'X_test': X_test,
         'y_test': y_test,
-        'architecture': arch
+        'architecture': arch,
+        'batch_size': batch_size
     }
 
     # Create Trials to store results

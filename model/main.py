@@ -38,7 +38,7 @@ try:
         print(f"Dir '{main_dir}' created.")
     else:
         print(f"Dir '{main_dir}' exists.")
-    timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
+    timestamp = f"{datetime.now().strftime('%Y%m%d_%H%M%S')}-opt_{optimization_enabled}-opt_ep_{epoches_optimization}-train_ep_{epoches_training}"
     sub_dir = os.path.join(main_dir, timestamp)
     os.makedirs(sub_dir, exist_ok=True)
     print(f"Subdir '{sub_dir}' created.")
@@ -216,6 +216,7 @@ try:
 
     arch_result = {}
     archs = ['Dense', 'LSTM', 'BLSTM']
+    batch_size = 32
 
     for arch in archs:
 
@@ -227,7 +228,7 @@ try:
             print("----------------#####################################----------------")
             print("----------------#        Init - Optimization        #----------------")
             print("----------------#####################################----------------")
-            best_params[arch] = optimization.optimize(sub_dir, X_train, y_train, X_test, y_test, arch, epochs=epoches_optimization, attempts=attempts_optimization)
+            best_params[arch] = optimization.optimize(sub_dir, X_train, y_train, X_test, y_test, arch, batch_size, epochs=epoches_optimization, attempts=attempts_optimization)
             print("----------------#####################################----------------")
             print("----------------#       Optimization finished       #----------------")
             print("----------------#####################################----------------")
@@ -244,7 +245,8 @@ try:
         params['type'] = "train"
         params['epochs'] = epoches_training
         params['architecture'] = arch
-
+        params['batch_size'] = batch_size
+        
         model = modeling.build(params)
         print("----------------#####################################----------------")
         print("----------------#          Modeling finished        #----------------")
@@ -253,7 +255,7 @@ try:
         print("----------------#####################################----------------")
         print("----------------#          Init - Training          #----------------")
         print("----------------#####################################----------------")
-        train_results, model = train.fit(X_train, y_train, X_test, y_test, model, sub_dir, arch, int(params['epochs']))
+        train_results, model = train.fit(sub_dir, X_train, y_train, X_test, y_test, model, arch, batch_size, int(params['epochs']))
         print("----------------#####################################----------------")
         print("----------------#          Training finished        #----------------")
         print("----------------#####################################----------------")
