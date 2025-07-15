@@ -31,7 +31,8 @@ def list_columns(data):
     return columns
 
 def remove_unused_collumns(data):
-    return data.drop(columns=['timeStamp', 'label', 'usecase'], axis=1)
+    data['duration'] = data['elapsed'] - data['Latency']
+    return data.drop(columns=['timeStamp', 'label', 'usecase', 'Latency', 'elapsed'], axis=1)
 
 def remove_duplicates(data):
     """
@@ -100,32 +101,13 @@ def categorize(data):
             data[column] = label_encoder.fit_transform(data[column])
             encoders[column] = label_encoder
         else:
-            print(f"A coluna {column} já parece estar codificada.")
+            print(f"The collumn {column} is already codified.")
     return data, encoders
 
 def decategorize(data, encoders):
     for column, label_encoder in encoders.items():
         data[column] = label_encoder.inverse_transform(data[column].astype(int))    
     return data
-
-
-def normalize_z_score(data):
-    """
-    Normalizes all columns in the dataset using Z-score normalization.
-
-    Parameters:
-    data (DataFrame): Dataset to be normalized.
-
-    Returns:
-    DataFrame: Dataset with normalized columns.
-    """
-    # Make a copy of the dataset to avoid modifying the original one
-    normalized_data = data.copy()
-
-    # Apply Z-score normalization to all columns except 'Latency'
-    columns_to_normalize = [col for col in data.columns if col != 'Latency']
-    normalized_data[columns_to_normalize] = (data[columns_to_normalize] - data[columns_to_normalize].mean()) / data[columns_to_normalize].std()
-    return normalized_data
 
 def normalize(data):
     normalized_data = data.copy()
@@ -267,13 +249,19 @@ def correlation_analysis(data, dir, plot=True, title="main"):
 def winsorization(data):
     print("-------DATASET UNWINSORIZED--------")
     print(data)
+    print("-------DATASET UNWINSORIZED (CLEANED) --------")
+    data_cleaned = check_and_remove_missing_values(data)
+    print(data_cleaned)
     limit_down = 0.15
     limit_up = 0.15
-    df_winsorized = data.copy()
+    df_winsorized = data_cleaned.copy()
     df_winsorized[df_winsorized.select_dtypes(include=['number']).columns] = df_winsorized.select_dtypes(include=['number']).apply(lambda x: winsorize(x.to_numpy(),limits=[limit_down, limit_up]))
     print("-------DATASET WINSORIZED--------")
     print(df_winsorized)
-    return df_winsorized
+    df_winsorized_cleaned = check_and_remove_missing_values(df_winsorized)
+    print("-------DATASET WINSORIZED (CLEANED) --------")
+    print(df_winsorized_cleaned)
+    return df_winsorized_cleaned
 
 cols_pca = [
         "total_operands", 
@@ -289,24 +277,95 @@ cols_pca = [
         #"length"
     ]
 
+# def reduce_scale_pca(data):
+#     print("Check Point 01")
+#     # Normalize
+#     scaler = StandardScaler()
+#     X_scaled = scaler.fit_transform(data[cols_pca])
+#     print("Check Point 02")
+
+#     print(X_scaled)
+
+#     X_scaled = check_and_remove_missing_values(X_scaled)
+    
+#     print(X_scaled)
+
+
+#     # Reduce to 3 components
+#     #pca = PCA(n_components=3)
+#     pca = PCA(n_components=1)
+#     principal_components = pca.fit_transform(X_scaled)
+#     print("Check Point 03")
+
+#     # Add to dataset
+#     df_pca = pd.DataFrame(principal_components, columns=["PCA1"])
+#     #df_pca = pd.DataFrame(principal_components, columns=["PCA1"])
+#     df = data.merge(df_pca, left_index=True, right_index=True)
+#     print("Check Point 04")
+
+#     print(df)
+
+#     return df, pca, scaler
+#     #return data, pca, scaler
+
 def reduce_scale_pca(data):
-    # Normalize
+    print("Check Point 01")
+
+    # Remove columns with zero variance
+    variances = data[cols_pca].var()
+    cols_nonconstant = variances[variances > 0].index.tolist()
+    if len(cols_nonconstant) == 0:
+        raise ValueError("All selected columns have zero variance.")
+
+    print(f"Columns kept for PCA (variance > 0): {cols_nonconstant}")
+
+    # Normalize the data
     scaler = StandardScaler()
-    X_scaled = scaler.fit_transform(data[cols_pca])
+    X_scaled = scaler.fit_transform(data[cols_nonconstant])
+    print("Check Point 02")
 
-    # Reduce to 3 components
-    #pca = PCA(n_components=3)
+    # Create temporary DataFrame for cleaning
+    df_temp = pd.DataFrame(X_scaled, index=data.index, columns=cols_nonconstant)
+
+    # Replace inf values with NaN
+    df_temp.replace([np.inf, -np.inf], np.nan, inplace=True)
+
+    # Clip extreme values to prevent overflow
+    max_val = df_temp.values.max()
+    min_val = df_temp.values.min()
+    if np.abs(max_val) > 1e6 or np.abs(min_val) > 1e6:
+        print(f"Warning: Extreme values detected (min={min_val}, max={max_val}). Clipping applied.")
+        df_temp = np.clip(df_temp, -1e6, 1e6)
+
+    # Remove outliers using IQR method
+    Q1 = df_temp.quantile(0.25)
+    Q3 = df_temp.quantile(0.75)
+    IQR = Q3 - Q1
+    mask_outliers = ~((df_temp < (Q1 - 1.5 * IQR)) | (df_temp > (Q3 + 1.5 * IQR))).any(axis=1)
+    df_temp = df_temp[mask_outliers]
+
+    # Drop any remaining NaNs
+    df_temp.dropna(inplace=True)
+
+    if df_temp.empty:
+        raise ValueError("No data left after cleaning (NaNs/Infs/Outliers removal).")
+
+    print("Check Point 02.5 - After cleaning")
+    print(df_temp.head())
+
+    # Apply PCA with 1 component
     pca = PCA(n_components=1)
-    principal_components = pca.fit_transform(X_scaled)
+    principal_components = pca.fit_transform(df_temp)
+    print("Check Point 03")
 
-    # Add to dataset
-    df_pca = pd.DataFrame(principal_components, columns=["PCA1"])
-    #df_pca = pd.DataFrame(principal_components, columns=["PCA1"])
+    # Create DataFrame with the PCA result
+    df_pca = pd.DataFrame(principal_components, columns=["PCA1"], index=df_temp.index)
+
+    # Merge with original DataFrame (only valid rows)
     df = data.merge(df_pca, left_index=True, right_index=True)
+    print("Check Point 04")
 
-    print(df)
-
-    return df
+    return df, pca, scaler
 
 def remove_reduced_collumns(data):
     return data.drop(columns=cols_pca, axis=1)
@@ -315,9 +374,9 @@ def remove_spikes(data):
     df = pd.DataFrame(data)
     window_size = 10
     weights = np.arange(1, window_size + 1)
-    df['WMA'] = df['Latency'].rolling(window=window_size).apply(lambda x: np.dot(x, weights) / weights.sum(), raw=True)
-    print(data['Latency'])
+    df['WMA'] = df['duration'].rolling(window=window_size).apply(lambda x: np.dot(x, weights) / weights.sum(), raw=True)
+    print(data['duration'])
     print(df['WMA'])
-    data['Latency'] = df['WMA']
-    return data
+    df['duration'] = df['WMA']
+    return df.drop(['WMA'], axis=1)
 

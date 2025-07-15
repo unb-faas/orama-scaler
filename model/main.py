@@ -109,23 +109,6 @@ try:
 
     #data_without_spikes = data_without_missing
 
-    print("#####################################")
-    print("#       Normalize with z-score      #")
-    print("#####################################")
-    # SUGESTÃO 03 ##########################################################
-    #  Normalização/Escalonamento:
-    #  - As colunas como "time", "bugs", "effort", "volume", entre outras, 
-    #  possuem valores muito grandes. Escalone esses valores usando técnicas 
-    #  como Min-Max Scaling ou Z-score para normalizar a amplitude dos dados, 
-    #  o que pode melhorar a performance de alguns algoritmos.
-    ########################################################################
-    #data_normalized_z_score = preprocessing.normalize_z_score(data_without_missing)
-    #print(data_normalized_z_score)
-
-    data_normalized_z_score, scaler = preprocessing.normalize(data_without_spikes)
-    print(data_normalized_z_score)
-    joblib.dump(scaler, f'{sub_dir}/scaler.pkl')
-
     #data_normalized_z_score_temp = preprocessing.remove_spikes(data_normalized_z_score)
 
     #data_normalized_z_score = data_normalized_z_score_temp
@@ -133,7 +116,7 @@ try:
     print("#####################################")
     print("#          winsorize                #")
     print("#####################################")
-    data_winsored = preprocessing.winsorization(data_normalized_z_score)
+    data_winsored = preprocessing.winsorization(data_without_spikes)
 
     # SUGESTÃO 05 ##########################################################
     #  Verificação de Outliers:
@@ -149,8 +132,8 @@ try:
     print("#####################################")
     print("#    Replace outliers with median   #")
     print("#####################################")
-    #data_without_outliers = preprocessing.replace_outliers_with_median(data_winsored)
-    data_without_outliers = preprocessing.remove_outliers(data_winsored)
+    data_without_outliers = preprocessing.replace_outliers_with_median(data_winsored)
+    #data_without_outliers = preprocessing.remove_outliers(data_winsored)
     #data_without_outliers = data_winsored
     print(data_without_outliers)
 
@@ -167,10 +150,30 @@ try:
     print("#####################################")
     print("#     Reducing Scale with PCA       #")
     print("#####################################")
-    data_with_pca = preprocessing.reduce_scale_pca(data_without_outliers)
+    data_with_pca, pca, pca_scaler = preprocessing.reduce_scale_pca(data_without_outliers)
     preprocessing.correlation_analysis(data_with_pca, sub_dir, True, "reduced")
+
+    joblib.dump(pca, f'{sub_dir}/pca.pkl')
+    joblib.dump(pca_scaler, f'{sub_dir}/pca_scaler.pkl')
+
     data_reduced = preprocessing.remove_reduced_collumns(data_with_pca)
     preprocessing.correlation_analysis(data_reduced, sub_dir, True, "reduced_cleaned")
+
+
+    print("#####################################")
+    print("#       Normalize with z-score      #")
+    print("#####################################")
+    # SUGESTÃO 03 ##########################################################
+    #  Normalização/Escalonamento:
+    #  - As colunas como "time", "bugs", "effort", "volume", entre outras, 
+    #  possuem valores muito grandes. Escalone esses valores usando técnicas 
+    #  como Min-Max Scaling ou Z-score para normalizar a amplitude dos dados, 
+    #  o que pode melhorar a performance de alguns algoritmos.
+    ########################################################################
+    data_normalized_z_score, scaler = preprocessing.normalize(data_reduced)
+    print(data_normalized_z_score)
+    joblib.dump(scaler, f'{sub_dir}/scaler.pkl')
+
 
     print("----------------#####################################----------------")
     print("----------------#      Preprocessing finished       #----------------")
@@ -185,7 +188,7 @@ try:
     print("----------------#####################################----------------")
     print("----------------#          Init - division          #----------------")
     print("----------------#####################################----------------")
-    X_train, X_test, y_train, y_test = division.divide(data_reduced)
+    X_train, X_test, y_train, y_test = division.divide(data_normalized_z_score)
     print("----------------#####################################----------------")
     print("----------------#          Division finished        #----------------")
     print("----------------#####################################----------------")
