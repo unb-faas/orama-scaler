@@ -4,11 +4,10 @@ import pandas as pd
 import numpy as np
 import seaborn as sns
 from sklearn.model_selection import KFold
-from sklearn.metrics import r2_score
 import random
 from contextlib import redirect_stdout
 
-def calculate_metrics(models, X_test, y_test):
+def calculate_metrics(models, X_test, y_test, dir):
     # Assume X_test and y_test are the same for all models
     X_test_r2 = np.asarray(X_test)
     y_test_r2 = np.squeeze(np.asarray(y_test))
@@ -52,11 +51,25 @@ def calculate_metrics(models, X_test, y_test):
             "rmse": rmse_values,
             "mse": mse_values,
             "mape": mape_values,
-            "mape2": mape_values,
+            "mape2": mape2_values,
             "mae": mae_values,
             "observations": observations,
             "predictions": predictions,
         }
+
+    metric_names = ["r2", "rmse", "mse", "mape", "mape2", "mae"]
+    with open(f"{dir}/models-evaluation-metrics.txt", 'w') as f:
+        for metric in metric_names:
+            f.write(f"{metric.upper()}\n")
+            headers = "\t" + "\t".join(results.keys()) + "\n"
+            f.write(headers)
+            for i in range(10):
+                row = f"R{i+1}"
+                for model_name in results:
+                    val = results[model_name][metric][i]
+                    row += f"\t{val:.4f}"
+                f.write(row + "\n")
+            f.write("\n")
     return results
 
 def plot_metric_boxplot(metrics, name, label, color, dir):
@@ -138,6 +151,7 @@ def plot_overview(metrics, dir):
         print(f"{arch} MAE: {mae}")
         mape = mean_absolute_percentage_error(observations, predictions)
         print(f"{arch} MAPE: {mape}")
+        print(f"{arch} MAPE: {mape * 100:.2f}%") 
         mse = mean_squared_error(observations, predictions)
         print(f"{arch} MSE: {mse}")
         rmse = np.sqrt(mse)
@@ -157,11 +171,11 @@ def plot_overview(metrics, dir):
 
 def evaluate(results, X_test, y_test, scaler, encoders, arch, dir, plot=True, test=False):
     if isinstance(results, dict):
-        metrics = calculate_metrics(results, X_test, y_test)
+        metrics = calculate_metrics(results, X_test, y_test, dir)
         plot_metric_boxplot(metrics, "r2", "R²", "#%06x" % random.randint(0, 0xFFFFFF), dir)
         plot_metric_boxplot(metrics, "rmse", "RMSE", "#%06x" % random.randint(0, 0xFFFFFF), dir)
         plot_metric_boxplot(metrics, "mse", "MSE", "#%06x" % random.randint(0, 0xFFFFFF), dir)
-        plot_metric_boxplot(metrics, "mape", "MAPE", "#%06x" % random.randint(0, 0xFFFFFF), dir)
+        plot_metric_boxplot(metrics, "mape2", "MAPE", "#%06x" % random.randint(0, 0xFFFFFF), dir)
         plot_metric_boxplot(metrics, "mae", "MAE", "#%06x" % random.randint(0, 0xFFFFFF), dir)
         plot_obs_preds(metrics, dir)
         plot_loss(results, dir)

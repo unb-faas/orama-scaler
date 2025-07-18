@@ -2,17 +2,16 @@ from hyperopt import fmin, tpe, hp, Trials
 import modeling
 from contextlib import redirect_stdout
 
-def optimize(dir, X_train, y_train, X_test, y_test, arch, batch_size, epochs=5, attempts=10):
-    loss_functions = ['mean_squared_error','mean_absolute_error','huber']
-    epochs_list = [epochs]
+def optimize(dir, X_train, y_train, X_test, y_test, arch, batch_size, loss_functions, start_neurons, max_neurons, learning_rate_start, dropout, epochs=5, attempts=10, ):
     # Define the search space for hyperparameters
     space = {
         "type": "optimization",
-        'num_layers': hp.quniform('num_layers', 1, 50, 1),  # From 1 to 20 hidden layers
-        'num_neurons': hp.quniform('num_neurons', 8, 512, 8),  # From 16 to 256 neurons per layer
-        'learning_rate': hp.loguniform('learning_rate', -5, 0),  # Between 10^-5 and 1
-        'loss_function': hp.choice('loss_function', loss_functions),  # Different loss functions
-        'epochs': hp.choice('epochs', epochs_list),
+        'start_neurons': hp.quniform('start_neurons', start_neurons["min"], start_neurons["max"], start_neurons["step"]),
+        'max_neurons': hp.quniform('max_neurons', max_neurons["min"], max_neurons["max"], max_neurons["step"]),
+        'learning_rate': hp.loguniform('learning_rate', learning_rate_start, 0),  # Between 10^-(X) and 1
+        'loss_function': hp.choice('loss_function', loss_functions),
+        'dropout': hp.uniform('dropout', dropout["min"], dropout["max"]),
+        'epochs': epochs,
         'dir':dir,
         'X_train': X_train, 
         'y_train': y_train, 
@@ -32,7 +31,6 @@ def optimize(dir, X_train, y_train, X_test, y_test, arch, batch_size, epochs=5, 
                 max_evals=attempts,  # Number of attempts
                 trials=trials)
     
-    best["epochs"] = epochs_list[best["epochs"]]
     best["loss_function"] = loss_functions[best["loss_function"]]
     print("------------*******----------------")
     print("Best Hyperparameters Found:", best)

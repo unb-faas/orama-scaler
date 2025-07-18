@@ -32,6 +32,7 @@ def list_columns(data):
 
 def remove_unused_collumns(data):
     data['duration'] = data['elapsed'] - data['Latency']
+    data.loc[data['duration'] == 0, 'duration'] = 1
     return data.drop(columns=['timeStamp', 'label', 'usecase', 'Latency', 'elapsed'], axis=1)
 
 def remove_duplicates(data):
@@ -96,7 +97,7 @@ def check_and_remove_missing_values(data):
 def categorize(data):
     encoders = {}
     for column in ['provider']:
-        if data[column].dtype == 'object':  # Verifique se a coluna é do tipo categórico
+        if data[column].dtype == 'object':
             label_encoder = LabelEncoder()
             data[column] = label_encoder.fit_transform(data[column])
             encoders[column] = label_encoder
@@ -194,8 +195,6 @@ def remove_outliers(data):
 
     return data
 
-import pandas as pd
-
 def replace_outliers_with_median(data):
     """
     Identifies outliers in each numerical column of the dataset using the IQR method and 
@@ -222,7 +221,7 @@ def replace_outliers_with_median(data):
         median_value = data[column].median()
         data[column] = data[column].apply(lambda x: median_value if x < lower_bound or x > upper_bound else x)
 
-    return data
+    return data.dropna()
 
 def correlation_analysis(data, dir, plot=True, title="main"):
     """
@@ -263,54 +262,7 @@ def winsorization(data):
     print(df_winsorized_cleaned)
     return df_winsorized_cleaned
 
-cols_pca = [
-        "total_operands", 
-        "distinct_operands", 
-        "total_operators", 
-        "distinct_operators",
-        "time", 
-        "bugs", 
-        "effort", 
-        "volume", 
-        #"difficulty", 
-        #"vocabulary", 
-        #"length"
-    ]
-
-# def reduce_scale_pca(data):
-#     print("Check Point 01")
-#     # Normalize
-#     scaler = StandardScaler()
-#     X_scaled = scaler.fit_transform(data[cols_pca])
-#     print("Check Point 02")
-
-#     print(X_scaled)
-
-#     X_scaled = check_and_remove_missing_values(X_scaled)
-    
-#     print(X_scaled)
-
-
-#     # Reduce to 3 components
-#     #pca = PCA(n_components=3)
-#     pca = PCA(n_components=1)
-#     principal_components = pca.fit_transform(X_scaled)
-#     print("Check Point 03")
-
-#     # Add to dataset
-#     df_pca = pd.DataFrame(principal_components, columns=["PCA1"])
-#     #df_pca = pd.DataFrame(principal_components, columns=["PCA1"])
-#     df = data.merge(df_pca, left_index=True, right_index=True)
-#     print("Check Point 04")
-
-#     print(df)
-
-#     return df, pca, scaler
-#     #return data, pca, scaler
-
-def reduce_scale_pca(data):
-    print("Check Point 01")
-
+def reduce_scale_pca(data, cols_pca):
     # Remove columns with zero variance
     variances = data[cols_pca].var()
     cols_nonconstant = variances[variances > 0].index.tolist()
@@ -322,8 +274,7 @@ def reduce_scale_pca(data):
     # Normalize the data
     scaler = StandardScaler()
     X_scaled = scaler.fit_transform(data[cols_nonconstant])
-    print("Check Point 02")
-
+    
     # Create temporary DataFrame for cleaning
     df_temp = pd.DataFrame(X_scaled, index=data.index, columns=cols_nonconstant)
 
@@ -350,27 +301,23 @@ def reduce_scale_pca(data):
     if df_temp.empty:
         raise ValueError("No data left after cleaning (NaNs/Infs/Outliers removal).")
 
-    print("Check Point 02.5 - After cleaning")
-    print(df_temp.head())
-
     # Apply PCA with 1 component
     pca = PCA(n_components=1)
     principal_components = pca.fit_transform(df_temp)
-    print("Check Point 03")
 
     # Create DataFrame with the PCA result
     df_pca = pd.DataFrame(principal_components, columns=["PCA1"], index=df_temp.index)
 
     # Merge with original DataFrame (only valid rows)
     df = data.merge(df_pca, left_index=True, right_index=True)
-    print("Check Point 04")
 
-    return df, pca, scaler
-
-def remove_reduced_collumns(data):
+    return df.dropna(), pca, scaler
+    
+def remove_reduced_collumns(data, cols_pca):
     return data.drop(columns=cols_pca, axis=1)
 
 def remove_spikes(data):
+    #return data
     df = pd.DataFrame(data)
     window_size = 10
     weights = np.arange(1, window_size + 1)
@@ -378,5 +325,5 @@ def remove_spikes(data):
     print(data['duration'])
     print(df['WMA'])
     df['duration'] = df['WMA']
-    return df.drop(['WMA'], axis=1)
+    return df.drop(['WMA'], axis=1).dropna()
 
