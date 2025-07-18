@@ -6,16 +6,14 @@ from tensorflow.keras import layers
 from tensorflow.keras.metrics import RootMeanSquaredError, MeanSquaredError, MeanAbsoluteError
 from tensorflow.keras.regularizers import l2
 from tensorflow.keras.callbacks import EarlyStopping
-
 import numpy as np
 
 def build(params):
     model_type = params["type"]
-    architecture = params.get("architecture", "dense")  # default para 'dense'
-    num_layers = int(params['num_layers'])
-    num_neurons = int(params['num_neurons'])
+    architecture = params.get("architecture", "dense")  # default 'dense'
     learning_rate = params['learning_rate']
     loss_function = params['loss_function']
+    dropout = params['dropout']
     epochs = params['epochs']
     dir = params['dir']
     X_train = params['X_train']
@@ -23,39 +21,67 @@ def build(params):
     X_test = params['X_test']
     y_test = params['y_test']
     batch_size = params['batch_size']
-
+    start_neurons = int(params['start_neurons'])
+    max_neurons = int(params['max_neurons'])
+    
+    print("-----------------")
+    print("learning_rate: ", learning_rate)
+    print("loss_function: ", loss_function)
+    print("start_neurons: ", start_neurons)
+    print("max_neurons: ", max_neurons)
+    print("-----------------")
+    
     model = keras.Sequential()
     
     if architecture == "Dense":
         model.add(Input(shape=(X_train.shape[1],)))
-        for _ in range(num_layers):
-            model.add(Dense(num_neurons, activation='relu', kernel_regularizer=l2(0.01)))
-            num_neurons = max(1, num_neurons // 2)
+        neurons = start_neurons
+        while neurons < max_neurons:
+            model.add(Dense(neurons, activation='relu', kernel_regularizer=l2(0.01)))
+            if dropout:
+                model.add(Dropout(dropout))
+            neurons *= 2
+
+        while neurons >= start_neurons:
+            model.add(Dense(neurons, activation='relu', kernel_regularizer=l2(0.01)))
+            if dropout:
+                model.add(Dropout(dropout))
+            neurons //= 2
         model.add(Dense(1, activation='linear'))
         validation_data=(X_test, y_test)
+
     
     elif architecture in ["LSTM", "BLSTM"]:
         if len(X_train.shape) == 2:
             X_train = np.array(X_train)[..., None]
             X_test = np.array(X_test)[..., None]
-        input_shape = (X_train.shape[1], X_train.shape[2])
-        for i in range(num_layers):
-            return_seq = (i < num_layers - 1)
-            units = max(1, num_neurons // (2 ** i))
 
-            if i == 0:
-                layer_input = Input(shape=input_shape)
-                model.add(layer_input)
+        model.add(Input(shape=(X_train.shape[1], X_train.shape[2])))
 
-            lstm_layer = LSTM(units, return_sequences=return_seq)
-
+        neurons = start_neurons
+        while neurons < max_neurons:
+            lstm_layer = LSTM(neurons, return_sequences=True, kernel_regularizer=l2(0.01))
             if architecture == "BLSTM":
                 model.add(Bidirectional(lstm_layer))
             else:
                 model.add(lstm_layer)
+            if dropout:
+                 model.add(Dropout(dropout))
+            neurons *= 2
+
+        while neurons >= start_neurons:
+            return_seq = neurons > start_neurons
+            lstm_layer = LSTM(neurons, return_sequences=return_seq, kernel_regularizer=l2(0.01))
+            if architecture == "BLSTM":
+                model.add(Bidirectional(lstm_layer))
+            else:
+                model.add(lstm_layer)
+            if dropout:
+                model.add(Dropout(dropout))
+            neurons //= 2
 
         model.add(Dense(1, activation='linear'))
-        validation_data=(X_test, y_test)
+        validation_data = (X_test, y_test)
 
     else:
         raise ValueError(f"Architecture unknown: {architecture}")
@@ -65,7 +91,8 @@ def build(params):
                   metrics=[MeanAbsoluteError(), MeanSquaredError(), RootMeanSquaredError()])
 
     if model_type == "optimization":
-        early_stop = EarlyStopping(monitor='val_loss', patience=5, restore_best_weights=True)
+        model.summary()
+        early_stop = EarlyStopping(monitor='val_loss', patience=3, restore_best_weights=True)
         history = model.fit(X_train,
                             y_train,
                             epochs=epochs,
